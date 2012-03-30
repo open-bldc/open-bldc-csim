@@ -1,43 +1,50 @@
+#include <stdbool.h>
+#include <math.h>
+#include <gsl/gsl_errno.h>
+
 #include "dyn_model.h"
+
+#include "misc_utils.h"
 
 /* Simulator internal voltages vector. */
 struct voltages_vector {
 	double eu;
 	double ev;
 	double ew;
-	double uv;
+	double vu;
 	double vv;
-	double wv;
+	double vw;
 	double star;
 };
 
-double backemf(struct state_vector *sv, struct motor *m, double thetae_offset)
+int backemf(struct state_vector *sv, struct motor *m, double thetae_offset, double *bemf)
 {
-	double phase_thetae = fmod((sv->theta * (m->NbPoles / 2.)) + thetae_offset, M_PI * 2);
+	double phase_thetae = norm_angle((sv->theta * (m->NbPoles / 2.)) + thetae_offset);
 	double bemf_constant = vpradps_of_rpmpv(m->Kv); /* aka. ke in V/rad/s */
 	double max_bemf = bemf_constant * sv->omega;
-	double bemf = 0.;
+	*bemf = 0.;
 
 	if ((0. <= phase_thetae) &&
 	    (phase_thetae <= (M_PI * (1./6.)))) {
-		bemf = (max_bemf / (M_PI * (1./6.))) * phase_thetae;
+		*bemf = (max_bemf / (M_PI * (1./6.))) * phase_thetae;
 	} else if (((M_PI/6.) < phase_thetae) &&
 		   (phase_thetae <= (M_PI * (5./6.)))) {
-		bemf = max_bemf;
+		*bemf = max_bemf;
 	} else if (((M_PI * (5./6.)) < phase_thetae) &&
 		   (phase_thetae <= (M_PI * (7./6.)))) {
-		bemf = -((max_bemf / (M_PI / 6.)) * (phase_thetae - M_PI));
+		*bemf = -((max_bemf / (M_PI / 6.)) * (phase_thetae - M_PI));
 	} else if (((M_PI * (7./6.)) < phase_thetae ) &&
-		   (phase_thetae <= (math.pi * (11./6.)))) {
-		bemf = -max_bemf;
+		   (phase_thetae <= (M_PI * (11./6.)))) {
+		*bemf = -max_bemf;
 	} else if (((M_PI * (11./6.)) < phase_thetae) &&
 		(phase_thetae <= (2.0 * M_PI))) {
-		bemf = (max_bemf/(M_PI/6.)) * (phase_thetae - (2. * M_PI));
+		*bemf = (max_bemf/(M_PI/6.)) * (phase_thetae - (2. * M_PI));
 	} else {
-		printf("ERROR: angle out of bounds can not calculate bemf %f", phase_thetae);
+		printf("ERROR: angle out of bounds can not calculate bemf %f\n", phase_thetae);
+		return GSL_FAILURE;
 	}
 
-	return bemf;
+	return GSL_SUCCESS;
 }
 
 void voltages(struct state_vector *sv, struct command_vector *cv, struct motor *m, struct voltages_vector *vv)
@@ -177,6 +184,15 @@ void voltages(struct state_vector *sv, struct command_vector *cv, struct motor *
 	}
 }
 
+void init_state(struct state_vector *sv)
+{
+  sv->iu = 0;
+  sv->iv = 0;
+  sv->iw = 0;
+  sv->theta = 0;
+  sv->omega = 0.000001;
+}
+
 int dyn(double t, const double asv[], double aov[], void *params)
 {
 	struct state_vector *sv = (struct state_vector *)asv;
@@ -184,17 +200,33 @@ int dyn(double t, const double asv[], double aov[], void *params)
 	struct parameters *p = (struct parameters *)params;
 	double etorque, mtorque;
 	struct voltages_vector vv;
+	int ret;
+
+	//printf("DEBUG: input %.5e %.5e %.5e %5e %5e %5e\n", t, sv->iu, sv->iv, sv->iw, sv->theta, sv->omega);
 
 	/* Calculate backemf voltages. */
-	vv.eu = backemf(sv, p->m, 0.);
-	vv.ev = backemf(sv, p->m, M_PI * (2. / 3.));
-	vv.ew = backemf(sv, p->m, M_PI * (4. / 3.));
+	ret = backemf(sv, p->m, 0., &vv.eu);
+	if (ret != GSL_SUCCESS) return ret;
+	ret = backemf(sv, p->m, M_PI * (2. / 3.), &vv.ev);
+	if (ret != GSL_SUCCESS) return ret;
+	ret = backemf(sv, p->m, M_PI * (4. / 3.), &vv.ew);
+	if (ret != GSL_SUCCESS) return ret;
+
+	//printf("DEBUG: %.5e %.5e %.5e\n", vv.eu, vv.ev, vv.ew);
 
 	/* Electromagnetic torque. */
+	if (sv->omega == 0) {
+		printf("ERROR: input state vector omega equals 0!!!\n");
+		return GSL_FAILURE;
+	}
 	etorque = ((vv.eu * sv->iu) + (vv.ev * sv->iv) + (vv.ew * sv->iw)) / sv->omega;
+
+	//printf("DEBUG: etorque %.5e\n", etorque);
 
 	/* Mechanical torque. */
 	mtorque = ((etorque * (p->m->NbPoles / 2)) - (p->m->damping * sv->omega) - p->pv->torque);
+
+	//printf("DEBUG: mtorque %.5e\n", mtorque);
 
 	if ((mtorque > 0) && (mtorque <= p->m->static_friction)) {
 		mtorque = 0;
@@ -219,6 +251,8 @@ int dyn(double t, const double asv[], double aov[], void *params)
 	sv_dot->iu = (vv.vu - (p->m->R * sv->iu) - vv.eu - vv.star) / (p->m->L - p->m->M);
 	sv_dot->iv = (vv.vv - (p->m->R * sv->iv) - vv.ev - vv.star) / (p->m->L - p->m->M);
 	sv_dot->iw = (vv.vw - (p->m->R * sv->iw) - vv.ew - vv.star) / (p->m->L - p->m->M);
+
+	//printf("DEBUG: output %.5e %.5e %.5e %5e %5e %5e\n", t, sv_dot->iu, sv_dot->iv, sv_dot->iw, sv_dot->theta, sv_dot->omega);
 
 	return GSL_SUCCESS;
 }

@@ -25,12 +25,12 @@ struct state_vector {
 
 /* Command vector struct. */
 struct command_vector {
-	bool lu; /* high side phase U switch */
 	bool hu; /* low side phase U switch */
-	bool lv; /* high side phase V switch */
+	bool lu; /* high side phase U switch */
 	bool hv; /* low side phase V switch */
-	bool lw; /* high side phase W switch */
+	bool lv; /* high side phase V switch */
 	bool hw; /* low side phase W switch */
+	bool lw; /* high side phase W switch */
 };
 
 /* Perturbation vector struct. */
@@ -56,5 +56,8 @@ struct parameters {
 	struct command_vector *cv;
 	struct perturbation_vector *pv;
 };
+
+void init_state(struct state_vector *sv);
+int dyn(double t, const double asv[], double aov[], void *params);
 
 #endif /* _DYN_MODEL_H */
