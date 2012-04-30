@@ -19,6 +19,10 @@
 #ifndef _DYN_MODEL_H
 #define _DYN_MODEL_H
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 /* Motor parameter struct. */
 struct motor {
 	double inertia;  /* aka 'J' in kg/(m^2) */
@@ -75,7 +79,13 @@ struct parameters {
 	struct perturbation_vector *pv;
 };
 
+int backemf(struct state_vector *sv, struct motor *m, double thetae_offset, double *bemf);
+
 void init_state(struct state_vector *sv);
 int dyn(double t, const double asv[], double aov[], void *params);
+
+#if defined(__cplusplus)
+} /* extern "C" */
+#endif
 
 #endif /* _DYN_MODEL_H */

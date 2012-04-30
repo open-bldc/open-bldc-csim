@@ -61,3 +61,8 @@ double norm_angle(double alpha)
 
   return alpha_n;
 }
+
+int angle_slice(double alpha, double sec_count)
+{
+  return (alpha / ((M_PI * 2) / sec_count));
+}

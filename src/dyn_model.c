@@ -40,27 +40,38 @@ int backemf(struct state_vector *sv, struct motor *m, double thetae_offset, doub
 	double phase_thetae = norm_angle((sv->theta * (m->NbPoles / 2.)) + thetae_offset);
 	double bemf_constant = vpradps_of_rpmpv(m->Kv); /* aka. ke in V/rad/s */
 	double max_bemf = bemf_constant * sv->omega;
+	int slice = angle_slice(phase_thetae, 12);
 	*bemf = 0.;
 
-	if ((0. <= phase_thetae) &&
-	    (phase_thetae <= (M_PI * (1./6.)))) {
+	switch (slice) {
+	case 0:
 		*bemf = (max_bemf / (M_PI * (1./6.))) * phase_thetae;
-	} else if (((M_PI/6.) < phase_thetae) &&
-		   (phase_thetae <= (M_PI * (5./6.)))) {
+		break;
+	case 1:
+	case 2:
+	case 3:
+	case 4:
 		*bemf = max_bemf;
-	} else if (((M_PI * (5./6.)) < phase_thetae) &&
-		   (phase_thetae <= (M_PI * (7./6.)))) {
-		*bemf = -((max_bemf / (M_PI / 6.)) * (phase_thetae - M_PI));
-	} else if (((M_PI * (7./6.)) < phase_thetae ) &&
-		   (phase_thetae <= (M_PI * (11./6.)))) {
+		break;
+	case 5:
+	case 6:
+		*bemf = -((max_bemf / (M_PI * (1./6.))) * (phase_thetae - M_PI));
+		break;
+	case 7:
+	case 8:
+	case 9:
+	case 10:
 		*bemf = -max_bemf;
-	} else if (((M_PI * (11./6.)) < phase_thetae) &&
-		(phase_thetae <= (2.0 * M_PI))) {
-		*bemf = (max_bemf/(M_PI/6.)) * (phase_thetae - (2. * M_PI));
-	} else {
+		break;
+	case 11:
+		*bemf = (max_bemf / (M_PI * (1./6.))) * (phase_thetae - (2. * M_PI));
+		break;
+	default:
 		printf("ERROR: angle out of bounds can not calculate bemf %f\n", phase_thetae);
 		return GSL_FAILURE;
 	}
+
+	printf("DEBUG: alpha %.5e bemf %.5e\n", phase_thetae, *bemf);
 
 	return GSL_SUCCESS;
 }
@@ -220,7 +231,7 @@ int dyn(double t, const double asv[], double aov[], void *params)
 	struct voltages_vector vv;
 	int ret;
 
-	//printf("DEBUG: input %.5e %.5e %.5e %5e %5e %5e\n", t, sv->iu, sv->iv, sv->iw, sv->theta, sv->omega);
+	printf("DEBUG: input t %.5e iu %.5e iv %.5e ew %5e th %5e om %5e\n", t, sv->iu, sv->iv, sv->iw, sv->theta, sv->omega);
 
 	/* Calculate backemf voltages. */
 	ret = backemf(sv, p->m, 0., &vv.eu);
@@ -230,7 +241,7 @@ int dyn(double t, const double asv[], double aov[], void *params)
 	ret = backemf(sv, p->m, M_PI * (4. / 3.), &vv.ew);
 	if (ret != GSL_SUCCESS) return ret;
 
-	//printf("DEBUG: %.5e %.5e %.5e\n", vv.eu, vv.ev, vv.ew);
+	printf("DEBUG: bemf %.5e %.5e %.5e\n", vv.eu, vv.ev, vv.ew);
 
 	/* Electromagnetic torque. */
 	if (sv->omega == 0) {
@@ -239,12 +250,12 @@ int dyn(double t, const double asv[], double aov[], void *params)
 	}
 	etorque = ((vv.eu * sv->iu) + (vv.ev * sv->iv) + (vv.ew * sv->iw)) / sv->omega;
 
-	//printf("DEBUG: etorque %.5e\n", etorque);
+	printf("DEBUG: etorque %.5e\n", etorque);
 
 	/* Mechanical torque. */
 	mtorque = ((etorque * (p->m->NbPoles / 2)) - (p->m->damping * sv->omega) - p->pv->torque);
 
-	//printf("DEBUG: mtorque %.5e\n", mtorque);
+	printf("DEBUG: damping %.5e omega %.5e torque %.5e mtorque %.5e\n", p->m->damping, sv->omega, p->pv->torque, mtorque);
 
 	if ((mtorque > 0) && (mtorque <= p->m->static_friction)) {
 		mtorque = 0;
