@@ -211,6 +211,8 @@ int run(double t, const struct setpoint *sp, const struct motor *m, const struct
 	int slice = angle_slice(elec_angle, 12);
 	struct command_vector *selected_cv;
 
+	init_steps();
+
 	if (fmod(t, pwm_cycle_time) <= pwm_duty_time) {
 		selected_cv = &command_steps[slice][0];
 	} else {
