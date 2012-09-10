@@ -24,6 +24,10 @@
 
 #include "misc_utils.h"
 
+#ifndef DEBUG
+//#define DEBUG
+#endif
+
 /* Simulator internal voltages vector. */
 struct voltages_vector {
 	double eu;
@@ -71,7 +75,9 @@ int backemf(struct state_vector *sv, struct motor *m, double thetae_offset, doub
 		return GSL_FAILURE;
 	}
 
+#ifdef DEBUG
 	printf("DEBUG: alpha %.5e bemf %.5e\n", phase_thetae, *bemf);
+#endif
 
 	return GSL_SUCCESS;
 }
@@ -231,7 +237,9 @@ int dyn(double t, const double asv[], double aov[], void *params)
 	struct voltages_vector vv;
 	int ret;
 
+#ifdef DEBUG
 	printf("DEBUG: input t %.5e iu %.5e iv %.5e ew %5e th %5e om %5e\n", t, sv->iu, sv->iv, sv->iw, sv->theta, sv->omega);
+#endif
 
 	/* Calculate backemf voltages. */
 	ret = backemf(sv, p->m, 0., &vv.eu);
@@ -241,7 +249,9 @@ int dyn(double t, const double asv[], double aov[], void *params)
 	ret = backemf(sv, p->m, M_PI * (4. / 3.), &vv.ew);
 	if (ret != GSL_SUCCESS) return ret;
 
+#ifdef DEBUG
 	printf("DEBUG: bemf %.5e %.5e %.5e\n", vv.eu, vv.ev, vv.ew);
+#endif
 
 	/* Electromagnetic torque. */
 	if (sv->omega == 0) {
@@ -250,12 +260,16 @@ int dyn(double t, const double asv[], double aov[], void *params)
 	}
 	etorque = ((vv.eu * sv->iu) + (vv.ev * sv->iv) + (vv.ew * sv->iw)) / sv->omega;
 
+#ifdef DEBUG
 	printf("DEBUG: etorque %.5e\n", etorque);
+#endif
 
 	/* Mechanical torque. */
 	mtorque = ((etorque * (p->m->NbPoles / 2)) - (p->m->damping * sv->omega) - p->pv->torque);
 
+#ifdef DEBUG
 	printf("DEBUG: damping %.5e omega %.5e torque %.5e mtorque %.5e\n", p->m->damping, sv->omega, p->pv->torque, mtorque);
+#endif
 
 	if ((mtorque > 0) && (mtorque <= p->m->static_friction)) {
 		mtorque = 0;
@@ -281,7 +295,9 @@ int dyn(double t, const double asv[], double aov[], void *params)
 	sv_dot->iv = (vv.vv - (p->m->R * sv->iv) - vv.ev - vv.star) / (p->m->L - p->m->M);
 	sv_dot->iw = (vv.vw - (p->m->R * sv->iw) - vv.ew - vv.star) / (p->m->L - p->m->M);
 
-	//printf("DEBUG: output %.5e %.5e %.5e %5e %5e %5e\n", t, sv_dot->iu, sv_dot->iv, sv_dot->iw, sv_dot->theta, sv_dot->omega);
+#ifdef DEBUG
+	printf("DEBUG: output %.5e %.5e %.5e %5e %5e %5e\n", t, sv_dot->iu, sv_dot->iv, sv_dot->iw, sv_dot->theta, sv_dot->omega);
+#endif
 
 	return GSL_SUCCESS;
 }

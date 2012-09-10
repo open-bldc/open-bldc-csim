@@ -224,7 +224,7 @@ int run(double t, const struct setpoint *sp, const struct motor *m, const struct
 	cv->hw = selected_cv->hw;
 	cv->lw = selected_cv->lw;
 
-	printf("step %d ", slice);
+	//printf("step %d ", slice);
 
 	return 1;
 }
