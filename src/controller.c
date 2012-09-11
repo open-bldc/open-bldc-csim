@@ -207,16 +207,16 @@ int run(double t, const struct setpoint *sp, const struct motor *m, const struct
 	double pwm_cycle_time = (1. / sp->pwm_frequency);
 	double pwm_duty_time = pwm_cycle_time * sp->pwm_duty;
 	/* create a virtual encoder */
-	double elec_angle = norm_angle(sv->theta * (m->NbPoles/2));
+	double elec_angle = norm_angle(sv->theta * (m->NbPoles/2)); // + ((M_PI/6)*8);
 	int slice = angle_slice(elec_angle, 12);
 	struct command_vector *selected_cv;
 
 	init_steps();
 
 	if (fmod(t, pwm_cycle_time) <= pwm_duty_time) {
-		selected_cv = &command_steps[slice][0];
+		selected_cv = &command_steps[11-slice][0];
 	} else {
-		selected_cv = &command_steps[slice][1];
+		selected_cv = &command_steps[11-slice][1];
 	}
 
 	cv->hu = selected_cv->hu;
