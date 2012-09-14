@@ -77,7 +77,7 @@ int main(void)
 	struct state_vector sv;
 	double perc;
 
-	QFile file("file.dat");
+	QFile file("obldc-csim-out.dat");
 	file.open(QIODevice::WriteOnly);
 	QDataStream out(&file);   // we will serialize the data into the file
 
