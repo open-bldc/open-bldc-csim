@@ -96,7 +96,7 @@ int main(void)
 		}
 
 		perc = (100./steps)*i;
-		printf("Progress: %.2lf%%\n", perc);
+		printf("Progress: %.2lf%%\r", perc);
 		out << t << sv.iu << sv.iv << sv.iw << sv.theta << sv.omega;
 		//fprintf (stderr, "%.5e %.5e %.5e %.5e %.5e %.5e\n", t, sv.iu, sv.iv, sv.iw, sv.theta, sv.omega);
 
