@@ -27,14 +27,14 @@
 #include "controller.h"
 
 struct motor motor = {
-	motor.inertia = 0.000007,
+	motor.inertia = 1.1,
 	motor.damping = 0.001,
 	motor.static_friction = 0.1,
 	motor.Kv = 1./32.3*1000,
 	motor.L = 0.00207,
 	motor.M = -0.00069,
 	motor.R = 11.9,
-	motor.VDC = 300,
+	motor.VDC = 100,
 	motor.NbPoles = 4
 };
 
@@ -48,7 +48,7 @@ struct command_vector cv = {
 };
 
 struct perturbation_vector pv = {
-	pv.torque = 0.1
+	pv.torque = 0.2
 };
 
 struct parameters params = {
@@ -58,7 +58,7 @@ struct parameters params = {
 };
 
 struct setpoint setpoint = {
-        setpoint.pwm_frequency = 10000,
+        setpoint.pwm_frequency = 16000,
         setpoint.pwm_duty = 1
 };
 
@@ -71,8 +71,8 @@ int main(void)
 	gsl_odeiv2_driver *d = gsl_odeiv2_driver_alloc_y_new(&sys, gsl_odeiv2_step_rk4, 1e-6, 1e-6, 0.0);
 
 	int i;
-	double t = 0.0, t1 = .20;
-	double sim_freq = 1000000;
+	double t = 0.0, t1 = 2.0;
+	double sim_freq = 100000;
 	int steps = (t1-t) * sim_freq;
 	struct state_vector sv;
 	double perc;
