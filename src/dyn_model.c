@@ -1,4 +1,4 @@
-/*
+  /*
  * Open-BLDC CSim - Open BrushLess DC Motor Controller C Simulator
  * Copyright (C) 2012 by Piotr Esden-Tempski <piotr@esden.net>
  *
@@ -23,6 +23,7 @@
 #include "dyn_model.h"
 
 #include "misc_utils.h"
+#include "switch.h"
 
 #ifndef DEBUG
 //#define DEBUG
@@ -82,12 +83,20 @@ int backemf(struct state_vector *sv, struct motor *m, double thetae_offset, doub
 	return GSL_SUCCESS;
 }
 
-void voltages(struct state_vector *sv, struct command_vector *cv, struct motor *m, struct voltages_vector *vv)
+void voltages(double t, struct state_vector *sv, struct command_vector *cv, struct motor *m, struct voltages_vector *vv)
 {
 	/* Check which phases are excited. */
-	bool pux = (cv->hu || cv->lu);
-	bool pvx = (cv->hv || cv->lv);
-	bool pwx = (cv->hw || cv->lw);
+
+	bool hu = switch_get(&(cv->hu), t);
+	bool lu = switch_get(&(cv->lu), t);
+	bool hv = switch_get(&(cv->hv), t);
+	bool lv = switch_get(&(cv->lv), t);
+	bool hw = switch_get(&(cv->hw), t);
+	bool lw = switch_get(&(cv->lw), t);
+
+	bool pux = (hu || lu);
+	bool pvx = (hv || lv);
+	bool pwx = (hw || lw);
 
 	vv->vu = 0.;
 	vv->vv = 0.;
@@ -96,19 +105,19 @@ void voltages(struct state_vector *sv, struct command_vector *cv, struct motor *
 
 	if (pux && pvx && pwx) {
 
-		if (cv->hu) {
+		if (hu) {
 			vv->vu = m->VDC / 2.;
 		} else {
 			vv->vu = -(m->VDC / 2.);
 		}
 
-		if (cv->hv) {
+		if (hv) {
 			vv->vv = m->VDC / 2.;
 		} else {
 			vv->vv = -(m->VDC / 2.);
 		}
 
-		if (cv->hw) {
+		if (hw) {
 			vv->vw = m->VDC / 2.;
 		} else {
 			vv->vw = -(m->VDC / 2.);
@@ -118,13 +127,13 @@ void voltages(struct state_vector *sv, struct command_vector *cv, struct motor *
 
 	} else if (pux && pvx) {
 
-		if (cv->hu) {
+		if (hu) {
 			vv->vu = m->VDC / 2.;
 		} else {
 			vv->vu = -(m->VDC / 2.);
 		}
 
-		if (cv->hv) {
+		if (hv) {
 			vv->vv = m->VDC / 2.;
 		} else {
 			vv->vv = -(m->VDC / 2.);
@@ -136,13 +145,13 @@ void voltages(struct state_vector *sv, struct command_vector *cv, struct motor *
 
 	} else if (pux && pwx) {
 
-		if (cv->hu) {
+		if (hu) {
 			vv->vu = m->VDC / 2.;
 		} else {
 			vv->vu = -(m->VDC / 2.);
 		}
 
-		if (cv->hw) {
+		if (hw) {
 			vv->vw = m->VDC / 2.;
 		} else {
 			vv->vw = -(m->VDC / 2.);
@@ -154,13 +163,13 @@ void voltages(struct state_vector *sv, struct command_vector *cv, struct motor *
 
 	} else if (pvx && pwx) {
 
-		if (cv->hv) {
+		if (hv) {
 			vv->vv = m->VDC / 2.;
 		} else {
 			vv->vv = -(m->VDC / 2.);
 		}
 
-		if (cv->hw) {
+		if (hw) {
 			vv->vw = m->VDC / 2.;
 		} else {
 			vv->vw = -(m->VDC / 2.);
@@ -172,7 +181,7 @@ void voltages(struct state_vector *sv, struct command_vector *cv, struct motor *
 
 	} else if (pux) {
 
-		if (cv->hu) {
+		if (hu) {
 			vv->vu = m->VDC / 2.;
 		} else {
 			vv->vu = -(m->VDC / 2.);
@@ -185,7 +194,7 @@ void voltages(struct state_vector *sv, struct command_vector *cv, struct motor *
 
 	} else if (pvx) {
 
-		if (cv->hv) {
+		if (hv) {
 			vv->vv = m->VDC / 2.;
 		} else {
 			vv->vv = -(m->VDC / 2.);
@@ -198,7 +207,7 @@ void voltages(struct state_vector *sv, struct command_vector *cv, struct motor *
 
 	} else if (pwx) {
 
-		if (cv->hw) {
+		if (hw) {
 			vv->vw = m->VDC / 2.;
 		} else {
 			vv->vw = -(m->VDC / 2.);
@@ -288,7 +297,7 @@ int dyn(double t, const double asv[], double aov[], void *params)
 	sv_dot->omega = mtorque / p->m->inertia;
 
 	/* Calculate voltages. */
-	voltages(sv, p->cv, p->m, &vv);
+	voltages(t, sv, p->cv, p->m, &vv);
 
 	/* Calculate dot currents. */
 	sv_dot->iu = (vv.vu - (p->m->R * sv->iu) - vv.eu - vv.star) / (p->m->L - p->m->M);

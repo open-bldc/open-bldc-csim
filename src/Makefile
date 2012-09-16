@@ -1,5 +1,5 @@
 
-OBJ=main.o misc_utils.o dyn_model.o controller.o
+OBJ=main.o misc_utils.o dyn_model.o controller.o switch.o
 
 CFLAGS=-I/opt/local/include -Wall
 CPPFLAGS=-I/opt/local/include -Wall -I/Users/esdentem/QtSDK/Desktop/Qt/4.8.1/gcc/include -I/Users/esdentem/QtSDK/Desktop/Qt/4.8.1/gcc/lib/QtCore.framework/Versions/Current/Headers/

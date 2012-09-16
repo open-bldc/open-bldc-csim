@@ -39,12 +39,12 @@ struct motor motor = {
 };
 
 struct command_vector cv = {
-	cv.hu = true,
-	cv.lu = false,
-	cv.hv = false,
-	cv.lv = true,
-	cv.hw = false,
-	cv.lw = false
+	cv.hu = NULL,
+	cv.lu = NULL,
+	cv.hv = NULL,
+	cv.lv = NULL,
+	cv.hw = NULL,
+	cv.lw = NULL
 };
 
 struct perturbation_vector pv = {
@@ -71,9 +71,10 @@ int main(void)
 	gsl_odeiv2_driver *d = gsl_odeiv2_driver_alloc_y_new(&sys, gsl_odeiv2_step_rk4, 1e-6, 1e-6, 0.0);
 
 	int i;
-	double t = 0.0, t1 = 2.0;
+	double t = 0.0, t_end = 2.0;
 	double sim_freq = 100000;
-	int steps = (t1-t) * sim_freq;
+	int steps = (t_end-t) * sim_freq;
+	double t_step = (t_end - t) / steps;
 	struct state_vector sv;
 	double perc;
 
@@ -82,11 +83,11 @@ int main(void)
 	QDataStream out(&file);   // we will serialize the data into the file
 
 	init_state(&sv);
-	run(t, &setpoint, &motor, &sv, &cv);
+	run(t, t + t_step, &setpoint, &motor, &sv, &cv);
 
 	for (i = 1; i <= steps; i++)
 	{
-		double ti = i * (t1 / steps);
+		double ti = i * t_step;
 		int status = gsl_odeiv2_driver_apply (d, &t, ti, (double *)&sv);
 
 		if (status != GSL_SUCCESS)
@@ -100,7 +101,7 @@ int main(void)
 		out << t << sv.iu << sv.iv << sv.iw << sv.theta << sv.omega;
 		//fprintf (stderr, "%.5e %.5e %.5e %.5e %.5e %.5e\n", t, sv.iu, sv.iv, sv.iw, sv.theta, sv.omega);
 
-		run(t, &setpoint, &motor, &sv, &cv);
+		run(t, t + t_step, &setpoint, &motor, &sv, &cv);
 
 	}
 

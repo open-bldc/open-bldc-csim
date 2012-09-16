@@ -16,22 +16,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _CONTROLLER_H
-#define _CONTROLLER_H
+#ifndef SWITCH_H
+#define SWITCH_H
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
-struct setpoint {
-  double pwm_frequency;
-  double pwm_duty;
+/* Switch state node. */
+struct ssn {
+	double time;
+	bool state;
+	bool stop;
+	struct ssn *next;
 };
 
-int run(double t, double t1, const struct setpoint *sp, const struct motor *m, const struct state_vector *sv, struct command_vector *cv);
+void switch_set(struct ssn **ssn, double t, bool state);
+void switch_pwm_gen(struct ssn **ssn, double t, double t1, double freq, double duty, bool inverted);
+bool switch_get(struct ssn **ssn, double t);
+void switch_clear(struct ssn **ssn);
 
 #if defined(__cplusplus)
 } /* extern "C" */
 #endif
 
-#endif /* _CONTROLLER_H */
+#endif /* SWITCH_H */

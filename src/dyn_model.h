@@ -47,12 +47,12 @@ struct state_vector {
 
 /* Command vector struct. */
 struct command_vector {
-	bool hu; /* low side phase U switch */
-	bool lu; /* high side phase U switch */
-	bool hv; /* low side phase V switch */
-	bool lv; /* high side phase V switch */
-	bool hw; /* low side phase W switch */
-	bool lw; /* high side phase W switch */
+	struct ssn *hu; /* low side phase U switch */
+	struct ssn *lu; /* high side phase U switch */
+	struct ssn *hv; /* low side phase V switch */
+	struct ssn *lv; /* high side phase V switch */
+	struct ssn *hw; /* low side phase W switch */
+	struct ssn *lw; /* high side phase W switch */
 };
 
 /* Perturbation vector struct. */
